@@ -29,10 +29,3 @@ revealEls.forEach((el) => observer.observe(el));
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-// Contact form (front-end only demo)
-const contactForm = document.getElementById('contactForm');
-contactForm?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  alert("Thanks for reaching out! This form isn't connected to a backend yet — wire it up to an email service to start receiving messages.");
-  contactForm.reset();
-});

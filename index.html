@@ -16,9 +16,8 @@
 <!-- ============ HEADER ============ -->
 <header class="site-header" id="siteHeader">
   <nav class="nav">
-    <a href="#home" class="brand">
-      <img src="assets/favicon.svg" alt="CareHarbour logo" />
-      Care<span class="accent">Harbour</span>
+    <a href="#home" class="brand brand--logo">
+      <img src="assets/careharbour-logo.svg" alt="CareHarbour Canada Inc." />
     </a>
     <div class="nav-links">
       <a href="#about">About</a>
@@ -30,7 +29,6 @@
       <a href="#contact">Contact</a>
     </div>
     <div class="nav-cta">
-      <a href="#partner" class="btn btn--outline btn--sm">Partner With Us</a>
       <a href="#contact" class="btn btn--primary btn--sm">Join the Community</a>
     </div>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
@@ -264,7 +262,7 @@
       </div>
       <div class="service-panel">
         <span class="tag">Talk Show</span>
-        <h3>Watch the next live episode</h3>
+        <h3>Join healthcare professionals shaping conversations and ideas in the industry</h3>
         <p>Join our monthly conversations with the people shaping caregiving in Canada.</p>
       </div>
     </div>
@@ -365,7 +363,9 @@
       </div>
     </div>
 
-    <form class="contact-form reveal" id="contactForm">
+    <form class="contact-form reveal" id="contactForm" action="https://formsubmit.co/info@careharbourcanada.ca" method="POST">
+      <input type="hidden" name="_subject" value="New message from the CareHarbour website" />
+      <input type="hidden" name="_captcha" value="false" />
       <div class="form-row">
         <div class="form-field">
           <label for="name">Full Name</label>
@@ -389,7 +389,7 @@
         </div>
       </div>
       <button type="submit" class="btn btn--dark" style="width:100%;">Send Message</button>
-      <p class="form-note">This form is front-end only. Connect it to an email service or backend (e.g. Formspree, Netlify Forms) to receive submissions.</p>
+      <p class="form-note">Messages are sent directly to info@careharbourcanada.ca via FormSubmit.</p>
     </form>
   </div>
 </section>
@@ -398,9 +398,8 @@
 <footer class="site-footer">
   <div class="container footer-top">
     <div class="footer-brand">
-      <a href="#home" class="brand">
-        <img src="assets/favicon.svg" alt="CareHarbour logo" />
-        Care<span class="accent">Harbour</span>
+      <a href="#home" class="brand brand--logo">
+        <img src="assets/careharbour-logo.svg" alt="CareHarbour Canada Inc." />
       </a>
       <p>CareHarbour Canada Inc. &mdash; Empowering caregivers. Strengthening organizations. Building healthier communities.</p>
     </div>

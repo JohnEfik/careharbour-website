@@ -139,6 +139,7 @@ h3 { font-size: 1.3rem; margin-bottom: 10px; }
 }
 .brand img { width: 34px; height: 34px; }
 .brand span.accent { color: var(--coral); }
+.brand--logo img { width: auto; height: 42px; }
 
 .nav-links {
   display: flex;
