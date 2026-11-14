@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CareHarbour</title>
+<meta name="description" content="Guided check-ins for caregivers on work stress and burnout, with practical non-clinical tips and community resources near you." />
+<meta name="theme-color" content="#0e4749" />
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="app-header">
+  <a class="app-brand" href="#/home"><img src="../assets/careharbour-logo.svg" alt="CareHarbour home" /></a>
+  <div class="app-header__actions">
+    <button type="button" class="link-quiet" id="signOutBtn" hidden>Sign out</button>
+    <!-- Works without JavaScript (goes to crisis.html); with JS it opens the dialog. -->
+    <a class="btn btn--crisis btn--sm" href="crisis.html" data-crisis-open>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+      <span>Crisis help</span>
+    </a>
+  </div>
+</header>
+
+<main id="main" class="app-main" tabindex="-1">
+  <noscript>
+    <h1>CareHarbour needs JavaScript</h1>
+    <p>Please turn on JavaScript to use the check-ins. If you need support right now, see <a href="crisis.html">crisis lines</a>.</p>
+  </noscript>
+</main>
+
+<footer class="app-footer">
+  <p>CareHarbour offers general, non-clinical guidance. It is not a medical diagnosis or treatment. Please consult a healthcare provider about clinical concerns.</p>
+  <p><strong>In immediate danger? Call 911.</strong> Thinking about suicide? Call or text <a href="tel:988">988</a>. <a href="crisis.html" data-crisis-open>More crisis lines</a></p>
+  <p class="app-footer__small">&copy; CareHarbour Canada Inc.</p>
+</footer>
+
+<dialog id="crisisDialog" class="crisis-dialog" aria-labelledby="crisisDialogTitle">
+  <div class="crisis-dialog__inner">
+    <div class="crisis-dialog__head">
+      <h2 id="crisisDialogTitle">Support is available right now</h2>
+      <button type="button" class="icon-btn" data-crisis-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <p>If you're thinking about harming yourself, or feel you can't keep yourself safe, please reach out now. These services are free and confidential.</p>
+    <div id="crisisDialogBody"></div>
+  </div>
+</dialog>
+
+<div id="announcer" class="sr-only" aria-live="polite"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

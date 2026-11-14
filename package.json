@@ -1,0 +1,8 @@
+{
+  "name": "careharbour",
+  "private": true,
+  "description": "CareHarbour landing page and caregiver platform. Static site; /functions holds Cloudflare Pages Functions.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.136.0"
+  }
+}

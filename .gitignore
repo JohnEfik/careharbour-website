@@ -1,0 +1,4 @@
+node_modules/
+.pnpm-store/
+.wrangler/
+lyrics-studio/

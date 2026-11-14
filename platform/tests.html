@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Engine tests · CareHarbour</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 16px; }
+  .pass { color: #146b6b; } .fail { color: #a8281a; font-weight: 700; }
+  #summary { font-size: 1.2rem; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Engine tests</h1>
+<p id="summary">Running…</p>
+<ol id="out"></ol>
+<script type="module">
+import { CONDITIONS, getCondition } from "./js/data/conditions.js";
+import * as engine from "./js/engine.js";
+import { parsePostalCode, lookupResources } from "./js/data/resources.js";
+import { mentionsCrisis, faqAnswer } from "./js/data/assistant-faq.js";
+
+const out = document.getElementById("out");
+let passed = 0, failed = 0;
+function test(name, fn) {
+  const li = document.createElement("li");
+  try { fn(); li.className = "pass"; li.textContent = `✓ ${name}`; passed++; }
+  catch (e) { li.className = "fail"; li.textContent = `✗ ${name} — ${e.message}`; failed++; }
+  out.appendChild(li);
+}
+const eq = (a, b, msg = "") => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${msg} expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); };
+const ok = (v, msg = "assertion failed") => { if (!v) throw new Error(msg); };
+
+// Answer every question in sequence with the given letters (core first, then follow-up).
+function run(condId, letters, format = "text") {
+  const c = getCondition(condId);
+  let s = engine.startSession(c, format);
+  for (const l of letters) s = engine.answer(c, s, l);
+  return { c, s, step: engine.getStep(c, s) };
+}
+const letterFor = (score) => "ABCD"[score];
+
+const ws = getCondition("work-stress");
+const bo = getCondition("burnout");
+
+test("both launch conditions have 6 scored core questions with 4 options", () => {
+  for (const c of [ws, bo]) {
+    eq(c.questions.length, 6, c.id);
+    c.questions.forEach((q) => eq(q.options.map((o) => o.score), [0, 1, 2, 3], `${c.id} ${q.id}`));
+  }
+});
+
+test("bands cover 0–18 with no gaps", () => {
+  for (const c of [ws, bo]) for (let s = 0; s <= 18; s++) ok(c.bands.filter((b) => s >= b.min && s <= b.max).length === 1, `${c.id} score ${s}`);
+});
+
+test("coming-soon conditions are not launchable", () => {
+  eq(CONDITIONS.filter((c) => c.status === "coming-soon").map((c) => c.id), ["compassion-fatigue", "isolation", "sleep-disruption", "financial-strain"]);
+  eq(getCondition("isolation"), null);
+});
+
+test("work stress band boundaries: 6 low, 7 moderate, 12 moderate, 13 high", () => {
+  // a follow-up, if triggered, is answered "A" below
+  const cases = [[[1,1,1,1,1,1], "low"], [[3,1,1,1,0,0], "low"], [[2,1,1,1,1,1], "moderate"], [[3,3,2,1,1,2], "moderate"], [[3,3,2,2,2,1], "high"], [[3,3,3,3,3,3], "high"]];
+  for (const [scores, band] of cases) {
+    const letters = scores.map(letterFor);
+    let { c, s, step } = run("work-stress", letters);
+    if (step.type === "question") s = engine.answer(c, s, "A");
+    const r = engine.buildReport(c, s);
+    eq(r.score, scores.reduce((a, b) => a + b), "score");
+    eq(r.band.id, band, `scores ${scores}`);
+  }
+});
+
+test("work stress follow-up triggers with exactly three C/D answers", () => {
+  const { step } = run("work-stress", ["C", "C", "D", "A", "A", "A"]);
+  eq(step.type, "question"); ok(step.question.isFollowUp, "should be follow-up");
+});
+
+test("work stress follow-up does NOT trigger with two C/D answers", () => {
+  const { step } = run("work-stress", ["D", "D", "B", "B", "B", "B"]);
+  eq(step.type, "complete");
+});
+
+test("follow-up answer doesn't change the score; C/D adds the relationship tip", () => {
+  const a = run("work-stress", ["C", "C", "C", "A", "A", "A", "D"]);
+  const ra = engine.buildReport(a.c, a.s);
+  eq(ra.score, 6); eq(ra.band.id, "low"); eq(ra.tips.length, 4); ok(ra.tips[3].startsWith("Strain that's spilling"));
+  const b = run("work-stress", ["C", "C", "C", "A", "A", "A", "B"]);
+  const rb = engine.buildReport(b.c, b.s);
+  eq(rb.score, 6); eq(rb.tips.length, 3);
+});
+
+test("going back and lowering an answer removes the follow-up and its tip", () => {
+  let { c, s } = run("work-stress", ["C", "C", "C", "A", "A", "A", "D"]);
+  // back to q3 (cursor 2) and change C → A
+  s = engine.back(engine.back(engine.back(engine.back(engine.back(s)))));
+  eq(engine.getStep(c, s).question.id, "q3");
+  s = engine.answer(c, s, "A");
+  for (const _ of [1, 2, 3]) s = engine.answer(c, s, "A");
+  eq(engine.getStep(c, s).type, "complete");
+  const r = engine.buildReport(c, s);
+  eq(r.followUpTriggered, false); eq(r.tips.length, 3);
+  eq(r.answers.length, 6, "stale follow-up answer must not appear");
+});
+
+test("burnout safety check triggers on Q6 = D regardless of low total", () => {
+  const { step } = run("burnout", ["A", "A", "A", "A", "A", "D"]);
+  ok(step.question && step.question.isFollowUp && step.question.safety, "safety follow-up expected");
+});
+
+test("burnout safety check does NOT trigger on Q6 = C even with high total", () => {
+  const { step } = run("burnout", ["D", "D", "D", "D", "D", "C"]);
+  eq(step.type, "complete");
+});
+
+test("burnout crisis answer sets crisis flag and framing; band still computed", () => {
+  const { c, s } = run("burnout", ["D", "D", "D", "D", "D", "D", "B"]);
+  const r = engine.buildReport(c, s);
+  eq(r.crisis, true); eq(r.crisisFraming, "What you've shared matters, and support is available right now.");
+  eq(r.score, 18); eq(r.band.id, "severe");
+});
+
+test("burnout safety answer 'No' gives the normal report", () => {
+  const { c, s } = run("burnout", ["B", "B", "B", "B", "B", "D", "A"]);
+  const r = engine.buildReport(c, s);
+  eq(r.crisis, false); eq(r.score, 8); eq(r.band.id, "moderate");
+});
+
+test("video and text formats walk the identical sequence", () => {
+  const letters = ["C", "D", "C", "B", "C", "D", "C"];
+  const t = run("work-stress", letters, "text"), v = run("work-stress", letters, "video");
+  const rt = engine.buildReport(t.c, t.s), rv = engine.buildReport(v.c, v.s);
+  eq({ ...rt, anonymousId: 0, format: 0, completedAt: 0 }, { ...rv, anonymousId: 0, format: 0, completedAt: 0 });
+});
+
+test("anonymous IDs look like CH-XXXX-XXXX and differ", () => {
+  const a = engine.generateAnonymousId(), b = engine.generateAnonymousId();
+  ok(/^CH-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/.test(a), a); ok(a !== b);
+});
+
+test("report contains no account data", () => {
+  const { c, s } = run("burnout", ["A", "A", "A", "A", "A", "A"]);
+  eq(Object.keys(engine.buildReport(c, s)).sort(), ["anonymousId", "answers", "band", "completedAt", "conditionId", "conditionTitle", "crisis", "crisisFraming", "followUpTriggered", "format", "maxScore", "score", "tips"]);
+});
+
+test("postal codes parse to the right province", () => {
+  eq(parsePostalCode("m5v2t6"), { fsa: "M5V", formatted: "M5V 2T6", province: "ON" });
+  eq(parsePostalCode(" V6B 1A1 ").province, "BC");
+  eq(parsePostalCode("H2X-1Y4").province, "QC");
+  eq(parsePostalCode("12345"), null);
+  eq(parsePostalCode("D1A 1A1"), null, "D is not a valid first letter");
+});
+
+test("every province returns at least the national resources", () => {
+  for (const code of ["A1A1A1", "B3H1A1", "C1A1A1", "E1A1A1", "G1A1A1", "K1A0B1", "R3C1A1", "S4P1A1", "T2P1A1", "V6B1A1", "X1A1A1", "Y1A1A1"]) {
+    const r = lookupResources(parsePostalCode(code));
+    ok(r.groups.flatMap((g) => g.items).length >= 6, code);
+  }
+});
+
+test("assistant crisis detection", () => {
+  ok(mentionsCrisis("sometimes I want to die")); ok(mentionsCrisis("thinking about suicide")); ok(mentionsCrisis("I've been self-harming"));
+  ok(!mentionsCrisis("I'm so tired of work")); ok(!mentionsCrisis("what is respite care?"));
+});
+
+test("assistant offline answers match topics", () => {
+  ok(faqAnswer("What is caregiver burnout?").includes("burnout"));
+  ok(faqAnswer("What is respite care?").includes("Respite"));
+  ok(faqAnswer("Is my report anonymous?").includes("anonymous ID"));
+});
+
+document.getElementById("summary").innerHTML = `<span class="${failed ? "fail" : "pass"}">${passed} passed, ${failed} failed</span>`;
+document.title = `${failed ? "FAIL" : "PASS"} · Engine tests`;
+</script>
+</body>
+</html>
